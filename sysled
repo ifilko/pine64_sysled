@@ -1,0 +1,57 @@
+#! /bin/bash
+### BEGIN INIT INFO
+# Provides:          sysled
+# Required-Start:    $local_fs $all killprocs
+# Required-Stop:
+# Default-Start:     3 4 5
+# Default-Stop:	     0 6 S
+# Short-Description: executed by init(8) upon entering runlevel 1 (single).
+### END INIT INFO
+
+PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/usr/local/sbin:/sbin
+
+
+do_start () {
+	logger "Switch on system led on PL7"
+	if [[ ! -d /sys/class/gpio/gpio359 ]]; then
+	    echo "359" > /sys/class/gpio/export
+	    echo "out" > /sys/class/gpio/gpio359/direction
+	    echo "0" > /sys/class/gpio/gpio359/value
+	elif [ $( cat /sys/class/gpio/gpio359/direction ) = "in" ]; then
+	    echo "out" > /sys/class/gpio/gpio359/direction
+	    echo "0" > /sys/class/gpio/gpio359/value
+	else
+	    echo "0" > /sys/class/gpio/gpio359/value
+	fi
+}
+
+do_stop () {
+	logger "Switch off system led on PL7"
+	if [[ -d /sys/class/gpio/gpio359  &&  $( cat /sys/class/gpio/gpio359/direction ) = "out"  && $( cat /sys/class/gpio/gpio359/value ) = "0" ]]; then
+	    echo "1" > /sys/class/gpio/gpio359/value
+	    echo "in" > /sys/class/gpio/gpio359/direction
+	    echo "359" > /sys/class/gpio/unexport
+	elif [[ -d /sys/class/gpio/gpio359 && $( cat /sys/class/gpio/gpio359/direction ) = "out" ]]; then
+	    echo "in" > /sys/class/gpio/gpio359
+	    echo "359" > /sys/class/gpio/unexport
+	else
+	    echo "359" > /sys/class/gpio/unexport
+	fi
+}
+
+case "$1" in
+  start)
+	do_start
+	;;
+  restart|reload|force-reload|status)
+	echo "Error: argument '$1' not supported" >&2
+	exit 3
+	;;
+  stop)
+	do_stop
+	;;
+  *)
+	echo "Usage: $0 start|stop" >&2
+	exit 3
+	;;
+esac
